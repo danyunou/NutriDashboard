@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { DashboardDiario } from './components/dashboard/DashboardDiario'
 import { ListaCompras } from './components/shopping/ListaCompras'
-import { LayoutDashboard, ShoppingCart } from 'lucide-react'
+import { CalendarDays, ShoppingBasket } from 'lucide-react'
 
 const TABS = [
-  { id: 'dashboard', label: 'Plan',    icon: LayoutDashboard, component: DashboardDiario },
-  { id: 'compras',   label: 'Compras', icon: ShoppingCart,    component: ListaCompras },
+  { id: 'dashboard', label: 'Mi Plan',  icon: CalendarDays,    component: DashboardDiario },
+  { id: 'compras',   label: 'Compras',  icon: ShoppingBasket,  component: ListaCompras },
 ]
 
 export default function App() {
@@ -13,23 +13,33 @@ export default function App() {
   const ActiveView = TABS.find(t => t.id === tab).component
 
   return (
-    <div className="min-h-svh flex flex-col">
-      <main className="flex-1 overflow-y-auto pb-20">
+    <div className="min-h-svh flex flex-col bg-zinc-950">
+      <main className="flex-1 overflow-y-auto pb-nav">
         <ActiveView />
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex bg-gray-900/95 backdrop-blur border-t border-gray-800">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors
-              ${tab === id ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
-          >
-            <Icon className="w-5 h-5" />
-            <span>{label}</span>
-          </button>
-        ))}
+      {/* Bottom nav */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 flex"
+        style={{ paddingBottom: 'var(--safe-bottom)' }}
+      >
+        <div className="flex w-full bg-zinc-900/90 backdrop-blur-xl border-t border-zinc-800/50">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className="flex-1 flex flex-col items-center gap-1 py-3 transition-all"
+            >
+              <Icon
+                className={`w-5 h-5 transition-colors ${tab === id ? 'text-emerald-400' : 'text-zinc-500'}`}
+                strokeWidth={tab === id ? 2.5 : 1.8}
+              />
+              <span className={`text-[10px] font-medium tracking-wide transition-colors ${tab === id ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
       </nav>
     </div>
   )
