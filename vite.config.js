@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   build: {
-    cssMinify: 'esbuild',
+    cssMinify: false,
   },
   plugins: [
     react(),
