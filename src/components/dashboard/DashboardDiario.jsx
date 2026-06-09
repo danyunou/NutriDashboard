@@ -1,26 +1,72 @@
-import { useState } from 'react'
-import { useMomentosConRecetas } from '../../hooks/useNutriData'
+import { useState, useEffect } from 'react'
+import { useMomentosConRecetas, useSubstitutions, useCompletedMeals } from '../../hooks/useNutriData'
 import { MomentoCard } from './MomentoCard'
 import { Spinner } from '../ui/Spinner'
 import { DIAS, getDiaActual } from '../../lib/utils'
+import { supabase } from '../../lib/supabaseClient'
+import { downloadNutriICS } from '../../lib/icsGenerator'
+import { Download } from 'lucide-react'
 
 const DIAS_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
 export function DashboardDiario() {
   const [diaSeleccionado, setDiaSeleccionado] = useState(getDiaActual())
+  const [highlightedHora, setHighlightedHora] = useState(null)
   const { data: momentos, loading, error } = useMomentosConRecetas(diaSeleccionado)
   const hoy = getDiaActual()
+  const dayStr = DIAS[diaSeleccionado - 1]
+
+  const { substitutions, setSubstitutions } = useSubstitutions(dayStr)
+  const { completedMeals, toggleComplete } = useCompletedMeals()
+
+  // Listen for notification click → switch to today + highlight the meal
+  useEffect(() => {
+    function handler(e) {
+      setDiaSeleccionado(getDiaActual())
+      setHighlightedHora(e.detail.hora)
+    }
+    window.addEventListener('nutri-navigate', handler)
+    return () => window.removeEventListener('nutri-navigate', handler)
+  }, [])
+
+  // Scroll to highlighted card once momentos are loaded
+  useEffect(() => {
+    if (!highlightedHora || loading) return
+    const id = `momento-h${highlightedHora.replace(':', '')}`
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const timer = setTimeout(() => setHighlightedHora(null), 6000)
+    return () => clearTimeout(timer)
+  }, [highlightedHora, loading])
+
+  async function handleSwap(momentoId, originalIngredientId, substituteId, substituteData) {
+    const key = `${momentoId}_${originalIngredientId}`
+    setSubstitutions(prev => ({
+      ...prev,
+      [key]: { substitute_ingredient_id: substituteId, substitute: substituteData },
+    }))
+    await supabase.from('user_substitutions').upsert(
+      { day: dayStr, momento_id: momentoId, original_ingredient_id: originalIngredientId, substitute_ingredient_id: substituteId },
+      { onConflict: 'day,momento_id,original_ingredient_id' }
+    )
+  }
 
   return (
     <div className="max-w-lg mx-auto">
-      {/* Header sticky */}
       <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-xl pt-safe">
-        <div className="px-5 pt-5 pb-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-1">Tu plan</p>
-          <h1 className="text-2xl font-bold text-white">{DIAS[diaSeleccionado - 1]}</h1>
+        <div className="px-5 pt-5 pb-4 flex items-start justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-1">Tu plan</p>
+            <h1 className="text-2xl font-bold text-white">{DIAS[diaSeleccionado - 1]}</h1>
+          </div>
+          <button
+            onClick={downloadNutriICS}
+            className="mt-1 p-2.5 rounded-xl bg-zinc-900 active:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+            title="Exportar horario a calendario (.ics)"
+          >
+            <Download className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Selector de días */}
         <div className="flex px-4 pb-3 gap-1.5">
           {DIAS_SHORT.map((letra, i) => {
             const num = i + 1
@@ -48,7 +94,6 @@ export function DashboardDiario() {
         <div className="h-px bg-zinc-800/50" />
       </div>
 
-      {/* Contenido */}
       <div className="px-4 pt-4">
         {error && (
           <div className="rounded-2xl bg-red-950/50 border border-red-900/50 p-4 text-sm text-red-400 mb-4">
@@ -60,7 +105,21 @@ export function DashboardDiario() {
           <div className="flex justify-center py-20"><Spinner size="lg" /></div>
         ) : (
           <div className="space-y-3 pb-6">
-            {momentos.map(m => <MomentoCard key={m.id} momento={m} />)}
+            {momentos.map(m => {
+              const mHora = m.hora?.slice(0, 5)
+              return (
+                <div key={m.id} id={`momento-h${mHora?.replace(':', '')}`}>
+                  <MomentoCard
+                    momento={m}
+                    substitutions={substitutions}
+                    onSwap={handleSwap}
+                    isCompleted={completedMeals.has(m.id)}
+                    onToggleComplete={toggleComplete}
+                    highlighted={mHora === highlightedHora}
+                  />
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

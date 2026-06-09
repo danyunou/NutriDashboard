@@ -1,16 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DashboardDiario } from './components/dashboard/DashboardDiario'
 import { ListaCompras } from './components/shopping/ListaCompras'
 import { CalendarDays, ShoppingBasket } from 'lucide-react'
+import { useDietNotifications } from './hooks/useDietNotifications'
 
 const TABS = [
-  { id: 'dashboard', label: 'Mi Plan',  icon: CalendarDays,    component: DashboardDiario },
-  { id: 'compras',   label: 'Compras',  icon: ShoppingBasket,  component: ListaCompras },
+  { id: 'dashboard', label: 'Mi Plan',  icon: CalendarDays,   component: DashboardDiario },
+  { id: 'compras',   label: 'Compras',  icon: ShoppingBasket, component: ListaCompras },
 ]
 
 export default function App() {
   const [tab, setTab] = useState('dashboard')
   const ActiveView = TABS.find(t => t.id === tab).component
+
+  useDietNotifications()
+
+  useEffect(() => {
+    function handler() { setTab('dashboard') }
+    window.addEventListener('nutri-navigate', handler)
+    return () => window.removeEventListener('nutri-navigate', handler)
+  }, [])
 
   return (
     <div className="min-h-svh flex flex-col bg-zinc-950">
@@ -18,7 +27,6 @@ export default function App() {
         <ActiveView />
       </main>
 
-      {/* Bottom nav */}
       <nav
         className="fixed bottom-0 left-0 right-0 z-50 flex"
         style={{ paddingBottom: 'var(--safe-bottom)' }}

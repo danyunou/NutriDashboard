@@ -10,7 +10,14 @@ export function AlimentoSelector({ ingrediente, onSwap }) {
 
   function handleSelect(alimento) {
     const gramos = calcularGramos(alimento.porcion_gramos, ingrediente.porciones)
-    onSwap({ ...ingrediente, alimento: alimento.nombre, gramos_totales: gramos, porcion_texto: alimento.porcion_texto })
+    onSwap({
+      ...ingrediente,
+      alimento: alimento.nombre,
+      gramos_totales: gramos,
+      porcion_texto: alimento.porcion_texto,
+      _substituteId: alimento.id,
+      _substitutePorcionGramos: alimento.porcion_gramos,
+    })
     setOpen(false)
   }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
-import { DIAS } from '../../lib/utils'
+import { DIAS, calcularGramos } from '../../lib/utils'
 import { Spinner } from '../ui/Spinner'
 import { Check } from 'lucide-react'
 
@@ -28,29 +28,54 @@ export function ListaCompras() {
     if (diasSeleccionados.length === 0) { setItems([]); return }
     setLoading(true)
 
-    supabase
-      .from('v_receta_ingredientes')
-      .select('alimento, grupo, porciones, gramos_totales, receta_id')
-      .then(async ({ data }) => {
-        if (!data) { setLoading(false); return }
-        const { data: recetas } = await supabase
-          .from('recetas')
-          .select('id, dia_semana')
-          .in('dia_semana', diasSeleccionados)
+    async function loadItems() {
+      const dayStrings = diasSeleccionados.map(d => DIAS[d - 1])
 
-        const ids = new Set(recetas?.map(r => r.id) ?? [])
-        const filtrado = data.filter(i => ids.has(i.receta_id))
+      const [
+        { data: allIngredients },
+        { data: recetas },
+        { data: subs },
+      ] = await Promise.all([
+        supabase.from('v_receta_ingredientes').select('alimento, alimento_id, grupo, porciones, gramos_totales, receta_id'),
+        supabase.from('recetas').select('id, dia_semana, momento_id').in('dia_semana', diasSeleccionados),
+        supabase
+          .from('user_substitutions')
+          .select('day, momento_id, original_ingredient_id, substitute:alimentos!substitute_ingredient_id(nombre, porcion_gramos)')
+          .in('day', dayStrings),
+      ])
 
-        const mapa = {}
-        for (const i of filtrado) {
-          const key = `${i.grupo}__${i.alimento}`
-          if (!mapa[key]) mapa[key] = { ...i, gramos_totales: 0 }
-          mapa[key].gramos_totales += i.gramos_totales
-        }
+      if (!allIngredients || !recetas) { setLoading(false); return }
 
-        setItems(Object.values(mapa).sort((a, b) => a.grupo.localeCompare(b.grupo)))
-        setLoading(false)
-      })
+      const recetaMap = Object.fromEntries((recetas ?? []).map(r => [r.id, r]))
+      const subsMap = Object.fromEntries(
+        (subs ?? []).map(s => [`${s.day}_${s.momento_id}_${s.original_ingredient_id}`, s])
+      )
+
+      const ids = new Set(recetas.map(r => r.id))
+      const filtrado = allIngredients.filter(i => ids.has(i.receta_id))
+
+      const mapa = {}
+      for (const i of filtrado) {
+        const receta = recetaMap[i.receta_id]
+        const dayStr = DIAS[(receta?.dia_semana ?? 1) - 1]
+        const subKey = `${dayStr}_${receta?.momento_id}_${i.alimento_id}`
+        const sub = subsMap[subKey]
+
+        const nombre = sub ? sub.substitute.nombre : i.alimento
+        const gramos = sub
+          ? calcularGramos(sub.substitute.porcion_gramos, i.porciones)
+          : i.gramos_totales
+
+        const key = `${i.grupo}__${nombre}`
+        if (!mapa[key]) mapa[key] = { alimento: nombre, grupo: i.grupo, gramos_totales: 0 }
+        mapa[key].gramos_totales += gramos
+      }
+
+      setItems(Object.values(mapa).sort((a, b) => a.grupo.localeCompare(b.grupo)))
+      setLoading(false)
+    }
+
+    loadItems()
   }, [diasSeleccionados])
 
   const grupos = [...new Set(items.map(i => i.grupo))]
@@ -59,7 +84,6 @@ export function ListaCompras() {
 
   return (
     <div className="max-w-lg mx-auto">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-xl pt-safe">
         <div className="px-5 pt-5 pb-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-1">Lista de compras</p>
@@ -73,7 +97,6 @@ export function ListaCompras() {
           </div>
         </div>
 
-        {/* Selector días */}
         <div className="flex px-4 pb-3 gap-1.5">
           {DIAS_SHORT.map((letra, i) => {
             const num = i + 1
@@ -97,7 +120,6 @@ export function ListaCompras() {
         <div className="h-px bg-zinc-800/50" />
       </div>
 
-      {/* Contenido */}
       <div className="px-4 pt-4">
         {loading ? (
           <div className="flex justify-center py-20"><Spinner size="lg" /></div>

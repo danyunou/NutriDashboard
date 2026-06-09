@@ -79,3 +79,56 @@ export function useIngredientesReceta(recetaId) {
 
   return { ingredientes, loading }
 }
+
+export function useSubstitutions(dayStr) {
+  const [substitutions, setSubstitutions] = useState({})
+
+  useEffect(() => {
+    if (!dayStr) return
+    setSubstitutions({})
+    supabase
+      .from('user_substitutions')
+      .select(`
+        momento_id, original_ingredient_id, substitute_ingredient_id,
+        substitute:alimentos!substitute_ingredient_id(id, nombre, porcion_gramos, porcion_texto)
+      `)
+      .eq('day', dayStr)
+      .then(({ data }) => {
+        const map = {}
+        for (const sub of (data ?? [])) {
+          const key = `${sub.momento_id}_${sub.original_ingredient_id}`
+          map[key] = { substitute_ingredient_id: sub.substitute_ingredient_id, substitute: sub.substitute }
+        }
+        setSubstitutions(map)
+      })
+  }, [dayStr])
+
+  return { substitutions, setSubstitutions }
+}
+
+export function useCompletedMeals() {
+  const [completedMeals, setCompletedMeals] = useState(new Set())
+  const today = new Date().toLocaleDateString('en-CA')
+
+  useEffect(() => {
+    supabase
+      .from('completed_meals')
+      .select('momento_id')
+      .eq('date', today)
+      .then(({ data }) => {
+        setCompletedMeals(new Set((data ?? []).map(r => r.momento_id)))
+      })
+  }, [])
+
+  async function toggleComplete(momentoId) {
+    if (completedMeals.has(momentoId)) {
+      await supabase.from('completed_meals').delete().eq('date', today).eq('momento_id', momentoId)
+      setCompletedMeals(prev => { const s = new Set(prev); s.delete(momentoId); return s })
+    } else {
+      await supabase.from('completed_meals').insert({ date: today, momento_id: momentoId })
+      setCompletedMeals(prev => new Set([...prev, momentoId]))
+    }
+  }
+
+  return { completedMeals, toggleComplete }
+}
