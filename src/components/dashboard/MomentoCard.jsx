@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useIngredientesReceta } from '../../hooks/useNutriData'
 import { AlimentoSelector } from './AlimentoSelector'
 import { Badge } from '../ui/Badge'
@@ -90,14 +90,11 @@ function RecetaDetalle({ receta, momentoId, substitutions, onSwap }) {
 }
 
 export function MomentoCard({ momento, substitutions, onSwap, isCompleted, onToggleComplete, highlighted }) {
-  const [open, setOpen] = useState(false)
+  const [manualOpen, setManualOpen] = useState(false)
+  const open = manualOpen || !!highlighted
   const hora = momento.hora?.slice(0, 5)
   const meta = HORA_LABELS[hora] ?? { emoji: '🕐', label: '' }
   const tieneRecetas = momento.recetas?.length > 0
-
-  useEffect(() => {
-    if (highlighted) setOpen(true)
-  }, [highlighted])
 
   return (
     <div className={`rounded-3xl overflow-hidden transition-all ${open ? 'bg-zinc-900' : 'bg-zinc-900/60'} ${isCompleted ? 'opacity-50' : ''} ${highlighted ? 'ring-1 ring-emerald-500/50' : ''}`}>
@@ -106,8 +103,8 @@ export function MomentoCard({ momento, substitutions, onSwap, isCompleted, onTog
         <div
           role="button"
           tabIndex={0}
-          onClick={() => setOpen(!open)}
-          onKeyDown={e => e.key === 'Enter' && setOpen(!open)}
+          onClick={() => setManualOpen(!manualOpen)}
+          onKeyDown={e => e.key === 'Enter' && setManualOpen(!manualOpen)}
           className="flex items-center flex-1 min-w-0 px-4 py-4 cursor-pointer select-none"
         >
           <div className="w-11 h-11 rounded-2xl bg-zinc-800 flex items-center justify-center text-xl shrink-0 mr-3">
@@ -137,8 +134,8 @@ export function MomentoCard({ momento, substitutions, onSwap, isCompleted, onTog
         <div
           role="button"
           tabIndex={0}
-          onClick={() => setOpen(!open)}
-          onKeyDown={e => e.key === 'Enter' && setOpen(!open)}
+          onClick={() => setManualOpen(!manualOpen)}
+          onKeyDown={e => e.key === 'Enter' && setManualOpen(!manualOpen)}
           className="pr-4 py-4 cursor-pointer select-none"
         >
           <ChevronDown
