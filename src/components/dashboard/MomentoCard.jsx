@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useIngredientesReceta } from '../../hooks/useNutriData'
+import { useIngredientesReceta, useRecetasPorMomento } from '../../hooks/useNutriData'
 import { AlimentoSelector } from './AlimentoSelector'
 import { Badge } from '../ui/Badge'
 import { Spinner } from '../ui/Spinner'
 import { calcularGramos } from '../../lib/utils'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Check, ArrowLeftRight } from 'lucide-react'
 
 const HORA_LABELS = {
   '07:00': { emoji: '🌅', label: 'Mañana' },
@@ -89,39 +89,75 @@ function RecetaDetalle({ receta, momentoId, substitutions, onSwap }) {
   )
 }
 
-function RecetaSelector({ recetas, momentoId, dayStr, substitutions, onSwap }) {
+function RecetaPanel({ momentoId, defaultReceta, dayStr, substitutions, onSwap }) {
   const storageKey = `nutri-receta-${dayStr}-${momentoId}`
-  const [selectedIdx, setSelectedIdx] = useState(() => {
-    const saved = parseInt(localStorage.getItem(storageKey), 10)
-    return isNaN(saved) || saved >= recetas.length ? 0 : saved
+
+  const [selectedReceta, setSelectedReceta] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey))
+      if (saved?.id) return saved
+    } catch {}
+    return defaultReceta
   })
 
-  function select(idx) {
-    setSelectedIdx(idx)
-    localStorage.setItem(storageKey, idx)
+  const [swapOpen, setSwapOpen] = useState(false)
+  const { recetas: allRecetas, loading } = useRecetasPorMomento(swapOpen ? momentoId : null)
+
+  function handleSelect(receta) {
+    setSelectedReceta(receta)
+    localStorage.setItem(storageKey, JSON.stringify({ id: receta.id, nombre: receta.nombre, notas: receta.notas }))
+    setSwapOpen(false)
   }
 
+  if (!selectedReceta) return null
+
   return (
-    <div className="space-y-3">
-      {recetas.length > 1 && (
-        <div className="flex gap-1.5 flex-wrap">
-          {recetas.map((r, i) => (
-            <button
-              key={r.id}
-              onClick={() => select(i)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
-                ${i === selectedIdx
-                  ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
-                  : 'bg-zinc-800 text-zinc-400 active:bg-zinc-700'
-                }`}
-            >
-              {r.nombre}
-            </button>
-          ))}
+    <div className="space-y-2">
+      <button
+        onClick={() => setSwapOpen(!swapOpen)}
+        className={`flex items-center gap-3 w-full text-left rounded-2xl px-3.5 py-3 transition-all
+          ${swapOpen ? 'bg-zinc-700/60 ring-1 ring-zinc-600/50' : 'bg-zinc-800/50 active:bg-zinc-700/50'}`}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-zinc-500 mb-0.5">Receta de hoy</p>
+          <p className="text-sm font-medium text-zinc-100 truncate">{selectedReceta.nombre}</p>
+        </div>
+        <ArrowLeftRight className={`w-3.5 h-3.5 shrink-0 transition-colors ${swapOpen ? 'text-emerald-400' : 'text-zinc-600'}`} />
+      </button>
+
+      {swapOpen && (
+        <div className="rounded-2xl bg-zinc-800 overflow-hidden shadow-xl shadow-black/30">
+          {loading || allRecetas.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-zinc-500">Cargando recetas…</p>
+          ) : (
+            allRecetas.map((r, idx) => {
+              const isActive = r.id === selectedReceta.id
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => handleSelect(r)}
+                  className={`flex items-center w-full px-4 py-3 text-left transition-colors active:bg-zinc-700
+                    ${idx !== 0 ? 'border-t border-zinc-700/50' : ''}
+                    ${isActive ? 'bg-emerald-500/10' : ''}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isActive
+                      ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      : <span className="w-3.5 h-3.5 shrink-0" />
+                    }
+                    <span className={`text-sm font-medium truncate ${isActive ? 'text-emerald-400' : 'text-zinc-200'}`}>
+                      {r.nombre}
+                    </span>
+                  </div>
+                </button>
+              )
+            })
+          )}
         </div>
       )}
+
       <RecetaDetalle
-        receta={recetas[selectedIdx]}
+        receta={selectedReceta}
         momentoId={momentoId}
         substitutions={substitutions}
         onSwap={onSwap}
@@ -140,7 +176,6 @@ export function MomentoCard({ momento, dayStr, substitutions, onSwap, isComplete
   return (
     <div className={`rounded-3xl overflow-hidden transition-all ${open ? 'bg-zinc-900' : 'bg-zinc-900/60'} ${isCompleted ? 'opacity-50' : ''} ${highlighted ? 'ring-1 ring-emerald-500/50' : ''}`}>
       <div className="flex items-center w-full">
-        {/* Expand area */}
         <div
           role="button"
           tabIndex={0}
@@ -162,7 +197,6 @@ export function MomentoCard({ momento, dayStr, substitutions, onSwap, isComplete
           )}
         </div>
 
-        {/* Completion button */}
         <button
           onClick={() => onToggleComplete(momento.id)}
           className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 mx-2 transition-all
@@ -171,7 +205,6 @@ export function MomentoCard({ momento, dayStr, substitutions, onSwap, isComplete
           {isCompleted && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
         </button>
 
-        {/* Chevron toggle */}
         <div
           role="button"
           tabIndex={0}
@@ -189,9 +222,9 @@ export function MomentoCard({ momento, dayStr, substitutions, onSwap, isComplete
         <div className="px-4 pb-4 space-y-3 border-t border-zinc-800/60 pt-3">
           <PorcionesRow distribucion={momento.distribucion_diaria} />
           {tieneRecetas ? (
-            <RecetaSelector
-              recetas={momento.recetas}
+            <RecetaPanel
               momentoId={momento.id}
+              defaultReceta={momento.recetas[0]}
               dayStr={dayStr}
               substitutions={substitutions}
               onSwap={(origId, subId, subData) => onSwap(momento.id, origId, subId, subData)}

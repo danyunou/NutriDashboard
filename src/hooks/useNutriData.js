@@ -114,6 +114,27 @@ export function useSubstitutions(dayStr) {
   return { substitutions, setSubstitutions }
 }
 
+export function useRecetasPorMomento(momentoId) {
+  const [recetas, setRecetas] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!momentoId) return
+    setLoading(true)
+    supabase
+      .from('recetas')
+      .select('id, nombre, notas, dia_semana')
+      .eq('momento_id', momentoId)
+      .order('dia_semana')
+      .then(({ data }) => {
+        setRecetas(data ?? [])
+        setLoading(false)
+      })
+  }, [momentoId])
+
+  return { recetas, loading }
+}
+
 export function useCompletedMeals() {
   const [completedMeals, setCompletedMeals] = useState(new Set())
   const today = new Date().toLocaleDateString('en-CA')
