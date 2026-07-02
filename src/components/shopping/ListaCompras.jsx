@@ -53,13 +53,37 @@ export function ListaCompras() {
 
       if (!allIngredients || !recetas) { setLoading(false); return }
 
-      const recetaMap = Object.fromEntries((recetas ?? []).map(r => [r.id, r]))
+      // Group recipes by dia_semana + momento_id, then pick the selected one per group
+      const recetasByKey = {}
+      for (const r of recetas ?? []) {
+        const key = `${r.dia_semana}_${r.momento_id}`
+        if (!recetasByKey[key]) recetasByKey[key] = []
+        recetasByKey[key].push(r)
+      }
+
+      const selectedIds = new Set()
+      const recetaMap = {}
+      for (const [key, group] of Object.entries(recetasByKey)) {
+        const [diaSemana, momentoId] = key.split('_')
+        const diaNum = parseInt(diaSemana)
+        const dayStr = DIAS[diaNum - 1]
+        let pickedId = group[0]?.id
+        try {
+          const saved = JSON.parse(localStorage.getItem(`nutri-receta-${dayStr}-${momentoId}`))
+          if (saved?.id) pickedId = saved.id
+        } catch {}
+        if (!pickedId) continue
+        selectedIds.add(pickedId)
+        if (!recetaMap[pickedId]) {
+          recetaMap[pickedId] = { dia_semana: diaNum, momento_id: parseInt(momentoId) }
+        }
+      }
+
       const subsMap = Object.fromEntries(
         (subs ?? []).map(s => [`${s.day}_${s.momento_id}_${s.original_ingredient_id}`, s])
       )
 
-      const ids = new Set(recetas.map(r => r.id))
-      const filtrado = allIngredients.filter(i => ids.has(i.receta_id))
+      const filtrado = allIngredients.filter(i => selectedIds.has(i.receta_id))
 
       const mapa = {}
       for (const i of filtrado) {

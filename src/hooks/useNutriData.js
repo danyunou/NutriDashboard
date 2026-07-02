@@ -114,6 +114,38 @@ export function useSubstitutions(dayStr) {
   return { substitutions, setSubstitutions }
 }
 
+export function useTrackerSemanal() {
+  const [completadosSet, setCompletadosSet] = useState(new Set())
+  const [momentos, setMomentos] = useState([])
+  const [weekDates, setWeekDates] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const today = new Date()
+    const jsDay = today.getDay()
+    const monOffset = jsDay === 0 ? -6 : 1 - jsDay
+    const mon = new Date(today)
+    mon.setDate(today.getDate() + monOffset)
+    const dates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(mon)
+      d.setDate(mon.getDate() + i)
+      return d.toLocaleDateString('en-CA')
+    })
+    setWeekDates(dates)
+
+    Promise.all([
+      supabase.from('completed_meals').select('date, momento_id').in('date', dates),
+      supabase.from('momentos_dia').select('id, nombre, hora').order('hora'),
+    ]).then(([{ data: completados }, { data: moms }]) => {
+      setCompletadosSet(new Set((completados ?? []).map(c => `${c.date}_${c.momento_id}`)))
+      setMomentos(moms ?? [])
+      setLoading(false)
+    })
+  }, [])
+
+  return { completadosSet, momentos, weekDates, loading }
+}
+
 export function useRecetasPorMomento(momentoId) {
   const [recetas, setRecetas] = useState([])
   const [loading, setLoading] = useState(false)

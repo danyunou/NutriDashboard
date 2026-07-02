@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { DashboardDiario } from './components/dashboard/DashboardDiario'
 import { ListaCompras } from './components/shopping/ListaCompras'
-import { CalendarDays, ShoppingBasket } from 'lucide-react'
+import { TrackerSemanal } from './components/tracker/TrackerSemanal'
+import { CalendarDays, ShoppingBasket, BarChart2 } from 'lucide-react'
 import { useDietNotifications } from './hooks/useDietNotifications'
 
 const TABS = [
   { id: 'dashboard', label: 'Mi Plan',  icon: CalendarDays,   component: DashboardDiario },
-  { id: 'compras',   label: 'Compras',  icon: ShoppingBasket, component: ListaCompras },
+  { id: 'tracker',   label: 'Semana',   icon: BarChart2,       component: TrackerSemanal },
+  { id: 'compras',   label: 'Compras',  icon: ShoppingBasket,  component: ListaCompras },
 ]
 
 export default function App() {
