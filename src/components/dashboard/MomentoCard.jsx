@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useIngredientesReceta, useRecetasPorMomento } from '../../hooks/useNutriData'
+import { useUser } from '../../hooks/useAuth'
 import { AlimentoSelector } from './AlimentoSelector'
 import { Badge } from '../ui/Badge'
 import { Spinner } from '../ui/Spinner'
@@ -90,7 +91,8 @@ function RecetaDetalle({ receta, momentoId, substitutions, onSwap }) {
 }
 
 function RecetaPanel({ momentoId, defaultReceta, dayStr, substitutions, onSwap }) {
-  const storageKey = `nutri-receta-${dayStr}-${momentoId}`
+  const user = useUser()
+  const storageKey = `nutri-receta-${user?.id ?? 'anon'}-${dayStr}-${momentoId}`
 
   const [selectedReceta, setSelectedReceta] = useState(() => {
     try {

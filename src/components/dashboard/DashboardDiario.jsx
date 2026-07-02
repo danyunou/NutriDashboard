@@ -5,6 +5,7 @@ import { Spinner } from '../ui/Spinner'
 import { DIAS, getDiaActual } from '../../lib/utils'
 import { supabase } from '../../lib/supabaseClient'
 import { downloadNutriICS } from '../../lib/icsGenerator'
+import { useUser } from '../../hooks/useAuth'
 import { Download } from 'lucide-react'
 
 const DIAS_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -16,6 +17,7 @@ export function DashboardDiario() {
   const hoy = getDiaActual()
   const dayStr = DIAS[diaSeleccionado - 1]
 
+  const user = useUser()
   const { substitutions, setSubstitutions } = useSubstitutions(dayStr)
   const { completedMeals, toggleComplete } = useCompletedMeals()
 
@@ -45,8 +47,8 @@ export function DashboardDiario() {
       [key]: { substitute_ingredient_id: substituteId, substitute: substituteData },
     }))
     await supabase.from('user_substitutions').upsert(
-      { day: dayStr, momento_id: momentoId, original_ingredient_id: originalIngredientId, substitute_ingredient_id: substituteId },
-      { onConflict: 'day,momento_id,original_ingredient_id' }
+      { user_id: user?.id, day: dayStr, momento_id: momentoId, original_ingredient_id: originalIngredientId, substitute_ingredient_id: substituteId },
+      { onConflict: 'user_id,day,momento_id,original_ingredient_id' }
     )
   }
 

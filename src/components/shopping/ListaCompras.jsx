@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { DIAS, calcularGramos } from '../../lib/utils'
+import { useUser } from '../../hooks/useAuth'
 import { Spinner } from '../ui/Spinner'
 import { Check } from 'lucide-react'
 
@@ -12,18 +13,23 @@ const GRUPO_EMOJI = {
 }
 
 export function ListaCompras() {
+  const user = useUser()
+  const checkedKey = `nutri-compras-checked-${user?.id ?? 'anon'}`
   const hoy = new Date().getDay()
   const [diasSeleccionados, setDiasSeleccionados] = useState([hoy === 0 ? 7 : hoy])
   const [items, setItems] = useState([])
-  const [checked, setChecked] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('nutri-compras-checked') ?? '{}') }
-    catch { return {} }
-  })
+  const [checked, setChecked] = useState({})
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    localStorage.setItem('nutri-compras-checked', JSON.stringify(checked))
-  }, [checked])
+    if (!user?.id) return
+    try { setChecked(JSON.parse(localStorage.getItem(checkedKey) ?? '{}')) } catch {}
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user?.id) return
+    localStorage.setItem(checkedKey, JSON.stringify(checked))
+  }, [checked, user?.id])
 
   function toggleDia(num) {
     setDiasSeleccionados(prev =>
@@ -69,7 +75,7 @@ export function ListaCompras() {
         const dayStr = DIAS[diaNum - 1]
         let pickedId = group[0]?.id
         try {
-          const saved = JSON.parse(localStorage.getItem(`nutri-receta-${dayStr}-${momentoId}`))
+          const saved = JSON.parse(localStorage.getItem(`nutri-receta-${user?.id ?? 'anon'}-${dayStr}-${momentoId}`))
           if (saved?.id) pickedId = saved.id
         } catch {}
         if (!pickedId) continue
