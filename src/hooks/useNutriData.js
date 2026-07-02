@@ -37,24 +37,32 @@ export function useMomentosConRecetas(diaSemana) {
   return { data, loading, error }
 }
 
-export function useAlimentosPorGrupo(grupoId) {
+export function useAlimentosPorGrupo(grupoNombre) {
   const [alimentos, setAlimentos] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!grupoId) return
+    if (!grupoNombre) return
     setLoading(true)
 
     supabase
-      .from('alimentos')
-      .select('id, nombre, porcion_texto, porcion_gramos')
-      .eq('grupo_id', grupoId)
-      .order('nombre')
-      .then(({ data }) => {
-        setAlimentos(data ?? [])
-        setLoading(false)
+      .from('grupos_alimentos')
+      .select('id')
+      .eq('nombre', grupoNombre)
+      .single()
+      .then(({ data: grupo }) => {
+        if (!grupo) { setLoading(false); return }
+        supabase
+          .from('alimentos')
+          .select('id, nombre, porcion_texto, porcion_gramos')
+          .eq('grupo_id', grupo.id)
+          .order('nombre')
+          .then(({ data }) => {
+            setAlimentos(data ?? [])
+            setLoading(false)
+          })
       })
-  }, [grupoId])
+  }, [grupoNombre])
 
   return { alimentos, loading }
 }

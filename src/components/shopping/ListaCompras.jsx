@@ -15,8 +15,15 @@ export function ListaCompras() {
   const hoy = new Date().getDay()
   const [diasSeleccionados, setDiasSeleccionados] = useState([hoy === 0 ? 7 : hoy])
   const [items, setItems] = useState([])
-  const [checked, setChecked] = useState({})
+  const [checked, setChecked] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nutri-compras-checked') ?? '{}') }
+    catch { return {} }
+  })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    localStorage.setItem('nutri-compras-checked', JSON.stringify(checked))
+  }, [checked])
 
   function toggleDia(num) {
     setDiasSeleccionados(prev =>
@@ -89,11 +96,21 @@ export function ListaCompras() {
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-1">Lista de compras</p>
           <div className="flex items-baseline justify-between">
             <h1 className="text-2xl font-bold text-white">Supermercado</h1>
-            {totalItems > 0 && (
-              <span className="text-sm text-zinc-500">
-                {checkedCount}/{totalItems}
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {totalItems > 0 && (
+                <span className="text-sm text-zinc-500">
+                  {checkedCount}/{totalItems}
+                </span>
+              )}
+              {checkedCount > 0 && (
+                <button
+                  onClick={() => setChecked({})}
+                  className="text-xs text-zinc-600 active:text-zinc-400 transition-colors"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

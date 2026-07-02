@@ -6,7 +6,7 @@ import { ArrowLeftRight, Check } from 'lucide-react'
 
 export function AlimentoSelector({ ingrediente, onSwap }) {
   const [open, setOpen] = useState(false)
-  const { alimentos } = useAlimentosPorGrupo(open ? ingrediente.grupo_id : null)
+  const { alimentos } = useAlimentosPorGrupo(open ? ingrediente.grupo : null)
 
   function handleSelect(alimento) {
     const gramos = calcularGramos(alimento.porcion_gramos, ingrediente.porciones)
