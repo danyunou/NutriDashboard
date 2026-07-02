@@ -89,7 +89,48 @@ function RecetaDetalle({ receta, momentoId, substitutions, onSwap }) {
   )
 }
 
-export function MomentoCard({ momento, substitutions, onSwap, isCompleted, onToggleComplete, highlighted }) {
+function RecetaSelector({ recetas, momentoId, dayStr, substitutions, onSwap }) {
+  const storageKey = `nutri-receta-${dayStr}-${momentoId}`
+  const [selectedIdx, setSelectedIdx] = useState(() => {
+    const saved = parseInt(localStorage.getItem(storageKey), 10)
+    return isNaN(saved) || saved >= recetas.length ? 0 : saved
+  })
+
+  function select(idx) {
+    setSelectedIdx(idx)
+    localStorage.setItem(storageKey, idx)
+  }
+
+  return (
+    <div className="space-y-3">
+      {recetas.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {recetas.map((r, i) => (
+            <button
+              key={r.id}
+              onClick={() => select(i)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
+                ${i === selectedIdx
+                  ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+                  : 'bg-zinc-800 text-zinc-400 active:bg-zinc-700'
+                }`}
+            >
+              {r.nombre}
+            </button>
+          ))}
+        </div>
+      )}
+      <RecetaDetalle
+        receta={recetas[selectedIdx]}
+        momentoId={momentoId}
+        substitutions={substitutions}
+        onSwap={onSwap}
+      />
+    </div>
+  )
+}
+
+export function MomentoCard({ momento, dayStr, substitutions, onSwap, isCompleted, onToggleComplete, highlighted }) {
   const [manualOpen, setManualOpen] = useState(false)
   const open = manualOpen || !!highlighted
   const hora = momento.hora?.slice(0, 5)
@@ -148,17 +189,13 @@ export function MomentoCard({ momento, substitutions, onSwap, isCompleted, onTog
         <div className="px-4 pb-4 space-y-3 border-t border-zinc-800/60 pt-3">
           <PorcionesRow distribucion={momento.distribucion_diaria} />
           {tieneRecetas ? (
-            <div className="space-y-2">
-              {momento.recetas.map(r => (
-                <RecetaDetalle
-                  key={r.id}
-                  receta={r}
-                  momentoId={momento.id}
-                  substitutions={substitutions}
-                  onSwap={(origId, subId, subData) => onSwap(momento.id, origId, subId, subData)}
-                />
-              ))}
-            </div>
+            <RecetaSelector
+              recetas={momento.recetas}
+              momentoId={momento.id}
+              dayStr={dayStr}
+              substitutions={substitutions}
+              onSwap={(origId, subId, subData) => onSwap(momento.id, origId, subId, subData)}
+            />
           ) : (
             <p className="text-xs text-zinc-600 text-center py-3">Sin recetas para este día.</p>
           )}

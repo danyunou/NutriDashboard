@@ -111,6 +111,7 @@ export function DashboardDiario() {
                 <div key={m.id} id={`momento-h${mHora?.replace(':', '')}`}>
                   <MomentoCard
                     momento={m}
+                    dayStr={dayStr}
                     substitutions={substitutions}
                     onSwap={handleSwap}
                     isCompleted={completedMeals.has(m.id)}

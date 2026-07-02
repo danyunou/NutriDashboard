@@ -6,11 +6,16 @@ const MEALS = [
   { hora: '20:00', nombre: 'Cena',       emoji: '🌙', durationMin: 30 },
 ]
 
-function nextMonday() {
+const WEEKDAYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
+
+// Returns the date of the next (or current) occurrence of dayIndex (0=Mon … 6=Sun)
+function nextWeekday(dayIndex) {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
-  const day = d.getDay() // 0=Sun, 1=Mon...
-  const diff = day === 1 ? 0 : day === 0 ? 1 : 8 - day
+  const jsDay = d.getDay() // 0=Sun, 1=Mon …
+  const monBased = jsDay === 0 ? 6 : jsDay - 1
+  let diff = dayIndex - monBased
+  if (diff < 0) diff += 7
   d.setDate(d.getDate() + diff)
   return d
 }
@@ -29,7 +34,6 @@ function stamp() {
 }
 
 function generateICS() {
-  const base = nextMonday()
   const dtstamp = stamp()
   const lines = [
     'BEGIN:VCALENDAR',
@@ -39,18 +43,22 @@ function generateICS() {
     'METHOD:PUBLISH',
   ]
 
-  for (const meal of MEALS) {
-    lines.push(
-      'BEGIN:VEVENT',
-      `UID:nutri-${meal.hora.replace(':', '')}@nutridashboard`,
-      `DTSTAMP:${dtstamp}`,
-      `DTSTART:${icsTime(base, meal.hora)}`,
-      `DTEND:${icsTime(base, meal.hora, meal.durationMin)}`,
-      'RRULE:FREQ=DAILY',
-      `SUMMARY:${meal.emoji} ${meal.nombre} — NutriDashboard`,
-      `DESCRIPTION:Es hora de tu ${meal.nombre}.`,
-      'END:VEVENT',
-    )
+  for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+    const base = nextWeekday(dayIdx)
+    const byday = WEEKDAYS[dayIdx]
+    for (const meal of MEALS) {
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:nutri-${byday}-${meal.hora.replace(':', '')}@nutridashboard`,
+        `DTSTAMP:${dtstamp}`,
+        `DTSTART:${icsTime(base, meal.hora)}`,
+        `DTEND:${icsTime(base, meal.hora, meal.durationMin)}`,
+        `RRULE:FREQ=WEEKLY;BYDAY=${byday}`,
+        `SUMMARY:${meal.emoji} ${meal.nombre} — NutriDashboard`,
+        `DESCRIPTION:Es hora de tu ${meal.nombre}.`,
+        'END:VEVENT',
+      )
+    }
   }
 
   lines.push('END:VCALENDAR')
