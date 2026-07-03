@@ -121,7 +121,7 @@ export function ListaCompras() {
 
   return (
     <div className="max-w-lg mx-auto">
-      <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-xl pt-safe">
+      <div className="sticky top-0 z-10 bg-zinc-950 pt-safe">
         <div className="px-5 pt-5 pb-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-1">Lista de compras</p>
           <div className="flex items-baseline justify-between">

@@ -37,7 +37,7 @@
     padding-bottom: calc(1rem + var(--safe-bottom));
   }
   .pb-nav {
-    padding-bottom: calc(4.5rem + var(--safe-bottom));
+    padding-bottom: calc(3.75rem + var(--safe-bottom));
   }
   .pt-safe {
     padding-top: var(--safe-top);
