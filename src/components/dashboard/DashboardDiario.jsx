@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react'
 import { useMomentosConRecetas, useSubstitutions, useCompletedMeals } from '../../hooks/useNutriData'
 import { MomentoCard } from './MomentoCard'
 import { Spinner } from '../ui/Spinner'
+import { Toast } from '../ui/Toast'
+import { Celebration } from '../ui/Celebration'
 import { DIAS, getDiaActual, getDateForDia } from '../../lib/utils'
 import { supabase } from '../../lib/supabaseClient'
 import { downloadNutriICS } from '../../lib/icsGenerator'
 import { useUser } from '../../hooks/useAuth'
+import { playMealSound, playDayCompleteSound, randomMealMsg } from '../../lib/sounds'
 import { Download } from 'lucide-react'
 
 const DIAS_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -21,6 +24,21 @@ export function DashboardDiario() {
   const fechaDia = getDateForDia(diaSeleccionado)
   const { substitutions, setSubstitutions } = useSubstitutions(dayStr)
   const { completedMeals, toggleComplete } = useCompletedMeals(fechaDia)
+
+  const [toast, setToast] = useState(null)
+  const [celebrating, setCelebrating] = useState(false)
+
+  async function handleToggleComplete(momentoId) {
+    const isCompleting = !completedMeals.has(momentoId)
+    await toggleComplete(momentoId)
+    if (!isCompleting) return
+    playMealSound()
+    setToast({ key: Date.now(), msg: randomMealMsg() })
+    const afterCount = completedMeals.size + 1
+    if (momentos.length > 0 && afterCount === momentos.length) {
+      setTimeout(() => { playDayCompleteSound(); setCelebrating(true) }, 500)
+    }
+  }
 
   // Listen for notification click → switch to today + highlight the meal
   useEffect(() => {
@@ -54,6 +72,9 @@ export function DashboardDiario() {
   }
 
   return (
+    <>
+    {toast && <Toast key={toast.key} message={toast.msg} onHide={() => setToast(null)} />}
+    {celebrating && <Celebration onDone={() => setCelebrating(false)} />}
     <div className="max-w-lg mx-auto">
       <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-xl pt-safe">
         <div className="px-5 pt-5 pb-4 flex items-start justify-between">
@@ -118,7 +139,7 @@ export function DashboardDiario() {
                     substitutions={substitutions}
                     onSwap={handleSwap}
                     isCompleted={completedMeals.has(m.id)}
-                    onToggleComplete={toggleComplete}
+                    onToggleComplete={handleToggleComplete}
                     highlighted={mHora === highlightedHora}
                   />
                 </div>
@@ -128,5 +149,6 @@ export function DashboardDiario() {
         )}
       </div>
     </div>
+    </>
   )
 }

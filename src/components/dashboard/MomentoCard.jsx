@@ -170,6 +170,13 @@ function RecetaPanel({ momentoId, defaultReceta, dayStr, substitutions, onSwap }
 
 export function MomentoCard({ momento, dayStr, substitutions, onSwap, isCompleted, onToggleComplete, highlighted }) {
   const [manualOpen, setManualOpen] = useState(false)
+  const [popAnim, setPopAnim] = useState(false)
+
+  function handleCheck() {
+    setPopAnim(true)
+    onToggleComplete(momento.id)
+    setTimeout(() => setPopAnim(false), 400)
+  }
   const open = manualOpen || !!highlighted
   const hora = momento.hora?.slice(0, 5)
   const meta = HORA_LABELS[hora] ?? { emoji: '🕐', label: '' }
@@ -200,9 +207,10 @@ export function MomentoCard({ momento, dayStr, substitutions, onSwap, isComplete
         </div>
 
         <button
-          onClick={() => onToggleComplete(momento.id)}
-          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 mx-2 transition-all
-            ${isCompleted ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-700 active:border-zinc-500'}`}
+          onClick={handleCheck}
+          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 mx-2 transition-colors
+            ${isCompleted ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-700 active:border-zinc-500'}
+            ${popAnim ? 'animate-check-pop' : ''}`}
         >
           {isCompleted && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
         </button>

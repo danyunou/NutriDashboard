@@ -20,17 +20,51 @@ function toHora12(hora) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
 }
 
+async function requestPermission() {
+  if (!('Notification' in window)) return false
+  if (Notification.permission === 'granted') return true
+  if (Notification.permission === 'denied') return false
+  const result = await Notification.requestPermission()
+  return result === 'granted'
+}
+
+// Uses service worker notification when available (required for iOS PWA 16.4+)
+// Falls back to Notification API for desktop/Android browser
+async function showNotification(title, body, tag) {
+  const opts = {
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag,
+    renotify: false,
+    silent: false,
+  }
+
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      await reg.showNotification(title, opts)
+      return
+    } catch {}
+  }
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification(title, opts)
+    n.onclick = () => {
+      window.focus()
+      n.close()
+    }
+  }
+}
+
 export function useDietNotifications() {
   const firedRef = useRef(new Set())
 
   useEffect(() => {
-    if (!('Notification' in window)) return
-
-    if (Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
+    requestPermission()
 
     function tick() {
+      if (!('Notification' in window)) return
       if (Notification.permission !== 'granted') return
 
       const now = new Date()
@@ -45,18 +79,11 @@ export function useDietNotifications() {
         if (firedRef.current.has(key)) continue
         firedRef.current.add(key)
 
-        const n = new Notification('NutriDashboard', {
-          body: `${meal.emoji} Dany, casi es hora de tu ${meal.nombre} (${toHora12(meal.hora)})`,
-          icon: '/icons/icon-192.png',
-          tag: key,
-          requireInteraction: false,
-        })
-
-        n.onclick = () => {
-          window.focus()
-          window.dispatchEvent(new CustomEvent('nutri-navigate', { detail: { hora: meal.hora } }))
-          n.close()
-        }
+        showNotification(
+          'NutriDashboard',
+          `${meal.emoji} Dany, casi es hora de tu ${meal.nombre} (${toHora12(meal.hora)})`,
+          key,
+        )
       }
     }
 
