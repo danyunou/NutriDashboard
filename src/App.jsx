@@ -10,6 +10,7 @@ import { useAuth, AuthContext } from './hooks/useAuth'
 import { supabase } from './lib/supabaseClient'
 import { Spinner } from './components/ui/Spinner'
 import { downloadNutriICS } from './lib/icsGenerator'
+import { usePushSubscription, subscribeToPush } from './hooks/usePushSubscription'
 
 const TABS = [
   { id: 'dashboard', label: 'Mi Plan',  icon: CalendarDays,  component: DashboardDiario },
@@ -35,22 +36,37 @@ function BottomSheet({ open, onClose, children }) {
   )
 }
 
-function AppShell() {
+function AppShell({ user }) {
   const [tab, setTab] = useState('dashboard')
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifStatus, setNotifStatus] = useState(null)
   const ActiveView = TABS.find(t => t.id === tab).component
 
   useDietNotifications()
+  usePushSubscription(user?.id)
 
   useEffect(() => {
     function handler() { setTab('dashboard') }
     window.addEventListener('nutri-navigate', handler)
-    return () => window.removeEventListener('nutri-navigate', handler)
+    // Listen for messages from service worker (notification tap)
+    function swHandler(e) {
+      if (e.data?.type === 'NUTRI_NAVIGATE') {
+        window.dispatchEvent(new CustomEvent('nutri-navigate', { detail: { hora: e.data.hora } }))
+      }
+    }
+    navigator.serviceWorker?.addEventListener('message', swHandler)
+    return () => {
+      window.removeEventListener('nutri-navigate', handler)
+      navigator.serviceWorker?.removeEventListener('message', swHandler)
+    }
   }, [])
 
   async function handleTestNotif() {
     const result = await triggerTestNotification()
+    if (result.ok) {
+      // Permission just granted → subscribe to push
+      await subscribeToPush(user?.id)
+    }
     setNotifStatus(result.ok ? 'ok' : 'denied')
     setTimeout(() => setNotifStatus(null), 3000)
   }
@@ -63,7 +79,7 @@ function AppShell() {
 
       {/* Bottom tab bar */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-50 bg-zinc-900 border-t border-zinc-800/60"
+        className="fixed bottom-0 inset-x-0 z-50 bg-zinc-950 border-t border-zinc-800/60"
         style={{ paddingBottom: 'var(--safe-bottom)' }}
       >
         <div className="flex">
@@ -100,7 +116,6 @@ function AppShell() {
       {/* Bottom sheet menu */}
       <BottomSheet open={menuOpen} onClose={() => setMenuOpen(false)}>
         <div className="px-4 pb-6 space-y-2">
-          {/* Test notification */}
           <button
             onClick={handleTestNotif}
             className={`flex items-center gap-3.5 w-full px-4 py-4 rounded-2xl transition-colors active:scale-[0.98]
@@ -110,13 +125,12 @@ function AppShell() {
           >
             <Bell className="w-5 h-5 shrink-0" />
             <div className="text-left">
-              <p className="text-sm font-medium leading-snug">Probar notificación</p>
-              {notifStatus === 'ok'     && <p className="text-xs text-emerald-500 mt-0.5">¡Enviada!</p>}
-              {notifStatus === 'denied' && <p className="text-xs text-red-400 mt-0.5">Permiso denegado</p>}
+              <p className="text-sm font-medium leading-snug">Activar notificaciones</p>
+              {notifStatus === 'ok'     && <p className="text-xs text-emerald-500 mt-0.5">¡Listo! Recibirás avisos 10 min antes</p>}
+              {notifStatus === 'denied' && <p className="text-xs text-red-400 mt-0.5">Permiso denegado en ajustes</p>}
             </div>
           </button>
 
-          {/* Download calendar */}
           <button
             onClick={() => { downloadNutriICS(); setMenuOpen(false) }}
             className="flex items-center gap-3.5 w-full px-4 py-4 rounded-2xl bg-zinc-800 text-zinc-200 active:bg-zinc-700 transition-colors active:scale-[0.98]"
@@ -127,7 +141,6 @@ function AppShell() {
 
           <div className="h-px bg-zinc-800 mx-1" />
 
-          {/* Logout */}
           <button
             onClick={() => { supabase.auth.signOut(); setMenuOpen(false) }}
             className="flex items-center gap-3.5 w-full px-4 py-4 rounded-2xl bg-zinc-800 text-red-400 active:bg-zinc-700 transition-colors active:scale-[0.98]"
@@ -154,7 +167,7 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={user}>
-      {user ? <AppShell /> : <AuthScreen />}
+      {user ? <AppShell user={user} /> : <AuthScreen />}
     </AuthContext.Provider>
   )
 }
