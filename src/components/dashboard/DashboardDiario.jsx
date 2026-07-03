@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useMomentosConRecetas, useSubstitutions, useCompletedMeals } from '../../hooks/useNutriData'
 import { MomentoCard } from './MomentoCard'
 import { Spinner } from '../ui/Spinner'
-import { DIAS, getDiaActual } from '../../lib/utils'
+import { DIAS, getDiaActual, getDateForDia } from '../../lib/utils'
 import { supabase } from '../../lib/supabaseClient'
 import { downloadNutriICS } from '../../lib/icsGenerator'
 import { useUser } from '../../hooks/useAuth'
@@ -18,8 +18,9 @@ export function DashboardDiario() {
   const dayStr = DIAS[diaSeleccionado - 1]
 
   const user = useUser()
+  const fechaDia = getDateForDia(diaSeleccionado)
   const { substitutions, setSubstitutions } = useSubstitutions(dayStr)
-  const { completedMeals, toggleComplete } = useCompletedMeals()
+  const { completedMeals, toggleComplete } = useCompletedMeals(fechaDia)
 
   // Listen for notification click → switch to today + highlight the meal
   useEffect(() => {

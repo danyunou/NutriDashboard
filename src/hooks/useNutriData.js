@@ -167,26 +167,27 @@ export function useRecetasPorMomento(momentoId) {
   return { recetas, loading }
 }
 
-export function useCompletedMeals() {
+export function useCompletedMeals(dateStr) {
   const [completedMeals, setCompletedMeals] = useState(new Set())
-  const today = new Date().toLocaleDateString('en-CA')
 
   useEffect(() => {
+    if (!dateStr) return
+    setCompletedMeals(new Set())
     supabase
       .from('completed_meals')
       .select('momento_id')
-      .eq('date', today)
+      .eq('date', dateStr)
       .then(({ data }) => {
         setCompletedMeals(new Set((data ?? []).map(r => r.momento_id)))
       })
-  }, [])
+  }, [dateStr])
 
   async function toggleComplete(momentoId) {
     if (completedMeals.has(momentoId)) {
-      await supabase.from('completed_meals').delete().eq('date', today).eq('momento_id', momentoId)
+      await supabase.from('completed_meals').delete().eq('date', dateStr).eq('momento_id', momentoId)
       setCompletedMeals(prev => { const s = new Set(prev); s.delete(momentoId); return s })
     } else {
-      await supabase.from('completed_meals').insert({ date: today, momento_id: momentoId })
+      await supabase.from('completed_meals').insert({ date: dateStr, momento_id: momentoId })
       setCompletedMeals(prev => new Set([...prev, momentoId]))
     }
   }

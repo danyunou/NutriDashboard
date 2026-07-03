@@ -25,3 +25,14 @@ export function getDiaActual() {
   const jsDay = new Date().getDay()  // 0=Dom, 1=Lun…
   return jsDay === 0 ? 7 : jsDay     // 1=Lun … 7=Dom
 }
+
+// Returns the YYYY-MM-DD date of the given diaSemana (1=Lun…7=Dom) within the current week
+export function getDateForDia(diaSemana) {
+  const today = new Date()
+  const jsDay = today.getDay()
+  const todayMonBased = jsDay === 0 ? 6 : jsDay - 1
+  const targetMonBased = diaSemana - 1
+  const d = new Date(today)
+  d.setDate(today.getDate() + (targetMonBased - todayMonBased))
+  return d.toLocaleDateString('en-CA')
+}
