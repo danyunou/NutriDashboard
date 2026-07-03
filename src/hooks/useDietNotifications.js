@@ -20,7 +20,7 @@ function toHora12(hora) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
 }
 
-async function requestPermission() {
+export async function requestPermission() {
   if (!('Notification' in window)) return false
   if (Notification.permission === 'granted') return true
   if (Notification.permission === 'denied') return false
@@ -55,6 +55,17 @@ async function showNotification(title, body, tag) {
       n.close()
     }
   }
+}
+
+export async function triggerTestNotification() {
+  const granted = await requestPermission()
+  if (!granted) return { ok: false, reason: 'permission_denied' }
+  await showNotification(
+    'NutriDashboard — Prueba ✅',
+    '🔔 Las notificaciones funcionan correctamente.',
+    'test-' + Date.now(),
+  )
+  return { ok: true }
 }
 
 export function useDietNotifications() {

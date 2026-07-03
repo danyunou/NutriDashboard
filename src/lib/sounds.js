@@ -1,10 +1,17 @@
-function ctx() {
-  return new (window.AudioContext || window.webkitAudioContext)()
+// Singleton AudioContext — iOS requires resume() inside a user gesture
+let _ac = null
+
+function getCtx() {
+  if (!_ac || _ac.state === 'closed') {
+    _ac = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  return _ac
 }
 
-export function playMealSound() {
+export async function playMealSound() {
   try {
-    const ac = ctx()
+    const ac = getCtx()
+    await ac.resume() // unlocks iOS audio policy on first tap
     const osc = ac.createOscillator()
     const gain = ac.createGain()
     osc.connect(gain)
@@ -19,9 +26,10 @@ export function playMealSound() {
   } catch {}
 }
 
-export function playDayCompleteSound() {
+export async function playDayCompleteSound() {
   try {
-    const ac = ctx()
+    const ac = getCtx()
+    await ac.resume()
     const notes = [523.25, 659.25, 783.99, 1046.50] // C5 E5 G5 C6
     notes.forEach((freq, i) => {
       const osc = ac.createOscillator()

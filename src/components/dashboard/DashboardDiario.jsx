@@ -9,7 +9,8 @@ import { supabase } from '../../lib/supabaseClient'
 import { downloadNutriICS } from '../../lib/icsGenerator'
 import { useUser } from '../../hooks/useAuth'
 import { playMealSound, playDayCompleteSound, randomMealMsg } from '../../lib/sounds'
-import { Download } from 'lucide-react'
+import { triggerTestNotification } from '../../hooks/useDietNotifications'
+import { Download, Bell } from 'lucide-react'
 
 const DIAS_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
@@ -27,6 +28,13 @@ export function DashboardDiario() {
 
   const [toast, setToast] = useState(null)
   const [celebrating, setCelebrating] = useState(false)
+  const [notifStatus, setNotifStatus] = useState(null) // 'ok' | 'denied' | null
+
+  async function handleTestNotif() {
+    const result = await triggerTestNotification()
+    setNotifStatus(result.ok ? 'ok' : 'denied')
+    setTimeout(() => setNotifStatus(null), 3000)
+  }
 
   async function handleToggleComplete(momentoId) {
     const isCompleting = !completedMeals.has(momentoId)
@@ -82,13 +90,26 @@ export function DashboardDiario() {
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-1">Tu plan</p>
             <h1 className="text-2xl font-bold text-white">{DIAS[diaSeleccionado - 1]}</h1>
           </div>
-          <button
-            onClick={downloadNutriICS}
-            className="mt-1 p-2.5 rounded-xl bg-zinc-900 active:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
-            title="Exportar horario a calendario (.ics)"
-          >
-            <Download className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              onClick={handleTestNotif}
+              className={`p-2.5 rounded-xl transition-colors ${
+                notifStatus === 'ok'     ? 'bg-emerald-500/20 text-emerald-400' :
+                notifStatus === 'denied' ? 'bg-red-500/20 text-red-400' :
+                'bg-zinc-900 active:bg-zinc-800 text-zinc-500'
+              }`}
+              title="Probar notificación"
+            >
+              <Bell className="w-4 h-4" />
+            </button>
+            <button
+              onClick={downloadNutriICS}
+              className="p-2.5 rounded-xl bg-zinc-900 active:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
+              title="Exportar horario a calendario (.ics)"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="flex px-4 pb-3 gap-1.5">
